@@ -1,43 +1,42 @@
 const database = require("./database")
 
 
-const getUsers = (req,res)=>{
+const getUsers = (req, res) => {
+  const initialSql = "select * from users";
+  const where = [];
 
-  const sql = "SELECT * FROM users";
-  const sqlValues=[]
-
-  if(req.query.color){
-    sql += " WHERE language=?";
-    sqlValues.push(req.query.language)
+  if (req.query.city) {
+    where.push({
+      column: "city",
+      value: req.query.city,
+      operator: "=",
+    });
   }
-  else if(req.query.max_duration){
-    sql+= " AND city <= ?";
-    sqlValues.push(req.query.city)
-
+  if (req.query.language) {
+    where.push({
+      column: "language",
+      value: req.query.language,
+      operator: "=",
+    });
   }
-  else if(req.query.max_duration){
-    sql+= "WHERE city =?"
-    sqlValues.push(req.query.city)
-  }
-  
 
   database
-
-  .query(sql,sqlValues)
-
-  .then(([users])=>{
-    if(users.length>0) {
-      res.json(users).status(200)
-    }else{
-      res.status(404).send("not found")
-    }
-  
-  })
-  .catch((error)=>{
-    res.sendStatus(500).send("error")
-
-  })
-}
+    .query(
+      where.reduce(
+        (sql, { column, operator }, index) =>
+          `${sql} ${index === 0 ? "where" : "and"} ${column} ${operator} ?`,
+        initialSql
+      ),
+      where.map(({ value }) => value)
+    )
+    .then(([users]) => {
+      res.json(users);
+    })
+    .catch((err) => {
+      console.error(err);
+      res.status(500).send("Error retrieving data from database");
+    });
+};
 
   const getUser = (req, res) => {
     const { id } = req.params;

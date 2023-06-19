@@ -1,36 +1,39 @@
 const database = require("./database")
 
 const getMovies = (req, res) => {
-     const sql = "SELECT * FROM movies";
-      const sqlValues=[]
+  const initialSql = "select * from movies";
+  const where = [];
 
-      if(req.query.color){
-        sql += " WHERE color=?";
-        sqlValues.push(req.query.color)
-      }
-      else if(req.query.max_duration){
-        sql+= " AND duration <= ?";
-        sqlValues.push(req.query.max_duration)
-
-      }
-      else if(req.query.max_duration){
-        sql+= "WHERE max_duration <=?"
-        sqlValues.push(req.query.max_duration)
-      }
-      
-
+  if (req.query.color != null) {
+    where.push({
+      column: "color",
+      value: req.query.color,
+      operator: "=",
+    });
+  }
+  if (req.query.max_duration != null) {
+    where.push({
+      column: "duration",
+      value: req.query.max_duration,
+      operator: "<=",
+    });
+  }
 
   database
-     .query(sql, sqlValues)
+    .query(
+      where.reduce(
+        (sql, { column, operator }, index) =>
+          `${sql} ${index === 0 ? "where" : "and"} ${column} ${operator} ?`,
+        initialSql
+      ),
+      where.map(({ value }) => value)
+    )
     .then(([movies]) => {
-      if (movies.length > 0) {
-        res.status(200).json(movies);
-      } else {
-        res.status(404).send("Not found");
-      }
+      res.json(movies);
     })
-    .catch((error) => {
-      res.status(500).send("Error");
+    .catch((err) => {
+      console.error(err);
+      res.status(500).send("Error retrieving data from database");
     });
 };
 
